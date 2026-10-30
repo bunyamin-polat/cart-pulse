@@ -1,0 +1,46 @@
+name: cartpulse
+
+services:
+  mysql:
+    image: mysql:8.0.43
+    container_name: cartpulse-mysql
+    restart: unless-stopped
+    # Started as root, the entrypoint chowns secure_file_priv and crashes on a read-only mount.
+    user: mysql
+    # MYSQL_DATABASE is left unset on purpose: creating `sales` is Exercise 2, Task 1.
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+    # Bound to localhost so the database is never exposed on the local network.
+    ports:
+      - "127.0.0.1:${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      # /var/lib/mysql-files is the only path LOAD DATA INFILE may read (secure_file_priv).
+      - ./modules/01-oltp-mysql/data:/var/lib/mysql-files:ro
+    healthcheck:
+      # TCP instead of the socket: the temporary server used during first-boot
+      # initialization only listens on the socket, so this stays red until the real one is up.
+      test:
+        - CMD-SHELL
+        - mysqladmin ping --host=127.0.0.1 --user=root --password="$$MYSQL_ROOT_PASSWORD" --silent
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  phpmyadmin:
+    image: phpmyadmin:5.2.1
+    container_name: cartpulse-phpmyadmin
+    restart: unless-stopped
+    # Optional tooling: a profile keeps it out of a plain `docker compose up`.
+    profiles: [admin]
+    environment:
+      PMA_HOST: mysql
+    ports:
+      - "127.0.0.1:${PHPMYADMIN_PORT:-8080}:80"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+volumes:
+  mysql_data:
