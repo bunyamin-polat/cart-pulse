@@ -38,7 +38,8 @@ download: ## Download the raw OLTP data
 load: download ## Create the schema and load the OLTP data (safe to re-run)
 	cat $(MODULE_1)/sql/01_create_database.sql \
 		$(MODULE_1)/sql/02_create_sales_data.sql \
-		$(MODULE_1)/sql/03_load_sales_data.sql | $(COMPOSE) exec -T mysql $(MYSQL_CLIENT)
+		$(MODULE_1)/sql/03_load_sales_data.sql \
+		$(MODULE_1)/sql/04_create_index.sql | $(COMPOSE) exec -T mysql $(MYSQL_CLIENT)
 
 reset: ## Stop all services and DELETE the database volume
 	$(COMPOSE) --profile admin down --volumes
