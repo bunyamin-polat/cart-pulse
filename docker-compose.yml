@@ -131,6 +131,16 @@ services:
       retries: 12
       start_period: 60s
 
+  # Runs one job and exits, through `docker compose run`.
+  spark:
+    build: ./modules/06-spark-ml
+    image: cartpulse-spark:4.2.0
+    profiles: [spark]
+    working_dir: /opt/cartpulse
+    volumes:
+      - ./modules/06-spark-ml/jobs:/opt/cartpulse/jobs:ro
+      - ./modules/06-spark-ml/data:/opt/cartpulse/data
+
   phpmyadmin:
     image: phpmyadmin:5.2.1
     container_name: cartpulse-phpmyadmin
