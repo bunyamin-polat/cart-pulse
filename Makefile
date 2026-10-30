@@ -2,10 +2,11 @@
 
 COMPOSE := docker compose
 MODULE_1 := modules/01-oltp-mysql
+MODULE_2 := modules/02-nosql-mongodb
 # MYSQL_PWD keeps the password off the command line and silences the client's warning about it.
 MYSQL_CLIENT := sh -c 'MYSQL_PWD="$$MYSQL_ROOT_PASSWORD" exec mysql --user=root'
 
-.PHONY: help setup up admin down ps logs mysql download load dump reset lint format
+.PHONY: help setup up admin down ps logs mysql mongo download load dump reset lint format
 
 help: ## Show available commands
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-10s %s\n", $$1, $$2}'
@@ -14,8 +15,8 @@ setup: ## Create the uv environment and a local .env
 	uv sync
 	@test -f .env || { cp .env.example .env; echo "Created .env, now replace its placeholder password."; }
 
-up: ## Start MySQL and wait until it is healthy
-	$(COMPOSE) up --detach --wait mysql
+up: ## Start MySQL and MongoDB and wait until they are healthy
+	$(COMPOSE) up --detach --wait mysql mongo
 
 admin: ## Start MySQL and phpMyAdmin
 	$(COMPOSE) --profile admin up --detach --wait
@@ -32,8 +33,12 @@ logs: ## Follow MySQL logs
 mysql: ## Open a MySQL shell as root
 	$(COMPOSE) exec mysql $(MYSQL_CLIENT)
 
-download: ## Download the raw OLTP data
+mongo: ## Open a MongoDB shell as root
+	$(COMPOSE) exec mongo sh -c 'exec mongosh --quiet --username root --password "$$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin'
+
+download: ## Download the raw data for all modules
 	bash $(MODULE_1)/scripts/download_data.sh
+	bash $(MODULE_2)/scripts/download_data.sh
 
 load: download ## Create the schema and load the OLTP data (safe to re-run)
 	cat $(MODULE_1)/sql/01_create_database.sql \

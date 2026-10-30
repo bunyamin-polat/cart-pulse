@@ -28,6 +28,26 @@ services:
       retries: 12
       start_period: 30s
 
+  mongo:
+    image: mongo:7.0.14
+    container_name: cartpulse-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:${MONGO_PORT:-27017}:27017"
+    volumes:
+      - mongo_data:/data/db
+      - ./modules/02-nosql-mongodb/data:/import:ro
+    healthcheck:
+      # ping needs no authentication, so the check never handles the password.
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
   phpmyadmin:
     image: phpmyadmin:5.2.1
     container_name: cartpulse-phpmyadmin
@@ -44,3 +64,4 @@ services:
 
 volumes:
   mysql_data:
+  mongo_data:
