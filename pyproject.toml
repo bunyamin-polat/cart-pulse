@@ -1,7 +1,7 @@
 [project]
 name = "cartpulse-data-platform"
 version = "0.1.0"
-description = "End-to-end e-commerce data platform: OLTP, NoSQL, warehouse, ETL, BI and ML."
+description = "End-to-end e-commerce data platform: OLTP, NoSQL, warehouse, ETL and ML."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -13,6 +13,10 @@ dependencies = [
 [tool.uv]
 package = false
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["modules/04-etl-airflow/etl"]
+
 [tool.ruff]
 line-length = 88
 
@@ -22,5 +26,6 @@ select = ["E", "F", "W", "I", "B", "UP"]
 
 [dependency-groups]
 dev = [
+    "pytest>=9.2.0",
     "ruff>=0.17.3",
 ]
