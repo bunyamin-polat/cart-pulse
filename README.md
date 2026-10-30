@@ -6,7 +6,7 @@ An end-to-end e-commerce data platform that takes retail transactions from an OL
 ![MongoDB](https://img.shields.io/badge/MongoDB-7.0-47A248?logo=mongodb&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
 ![Airflow](https://img.shields.io/badge/Airflow-2.10-017CEE?logo=apacheairflow&logoColor=white)
-![Spark](https://img.shields.io/badge/Spark-planned-E25A1C?logo=apachespark&logoColor=white)
+![Spark](https://img.shields.io/badge/Spark-4.2-E25A1C?logo=apachespark&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![Ruff](https://img.shields.io/badge/code%20style-Ruff-D7FF64?logo=ruff&logoColor=black)
@@ -36,7 +36,7 @@ See [docs/architecture.md](docs/architecture.md) for the data flow and design ra
 | 3 | [Data warehouse and reporting](modules/03-data-warehouse/README.md) | PostgreSQL | ✅ Done |
 | 4 | BI dashboard | Looker Studio or Cognos Analytics | ⏳ Planned |
 | 5 | [ETL pipelines](modules/05-etl-airflow/README.md) | Python, Airflow | ✅ Done |
-| 6 | Sales projections | Spark ML | ⏳ Planned |
+| 6 | [Sales projections](modules/06-spark-ml/README.md) | Spark ML | ✅ Done |
 
 ### Highlights
 
@@ -48,6 +48,7 @@ See [docs/architecture.md](docs/architecture.md) for the data flow and design ra
 - A PostgreSQL star schema answers reports with `GROUPING SETS`, `ROLLUP`, `CUBE` and a materialized view
 - A Python ETL copies only new rows, and a second run moves nothing
 - An Airflow DAG processes the web server log every day
+- Spark jobs analyze search terms and forecast sales, with a backtest against a plain average
 - Setup is tested from a fresh clone
 
 ## Quick start
@@ -73,6 +74,8 @@ make dump    # export sales_data to a SQL file
 make warehouse-reports   # run the warehouse analytics queries
 make run-etl   # copy new rows from the ETL source to the warehouse
 make airflow   # start Apache Airflow
+make spark-build      # build the Spark image
+make spark-forecast   # train the sales model and forecast 2023
 ```
 
 Run `make` to list every command. `make down` stops the services and keeps the data. `make reset` also deletes the database volume.

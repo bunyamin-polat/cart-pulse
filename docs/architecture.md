@@ -39,7 +39,7 @@ flowchart LR
 | PostgreSQL | Holds fact and dimension tables for reporting | 3 | ✅ Built |
 | BI dashboard | Presents retail metrics | 4 | ⏳ Planned |
 | Python ETL and Airflow | Copy new sales to the warehouse and process the web log | 5 | ✅ Built |
-| Spark ML | Projects future sales | 6 | ⏳ Planned |
+| Spark ML | Analyzes search terms and projects future sales | 6 | ✅ Built |
 
 ## Data flow
 
