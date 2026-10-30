@@ -41,8 +41,9 @@ flowchart LR
 - ✅ MySQL 8.0 running in Docker Compose with a health check
 - ✅ `sales` database and `sales_data` table
 - ✅ Scripted download and idempotent bulk load of 2,605 transactions
-- ⏳ `ts` index on `timestamp`
-- ⏳ `datadump.sh` backup script
+- ✅ `ts` index on `timestamp` for time-based incremental exports
+- ✅ `datadump.sh` backup script, verified with a restore of all rows
+- ⏳ Module documentation
 
 ## Quick start
 
@@ -61,6 +62,7 @@ Replace the placeholder password in `.env` before the first start, because MySQL
 make up      # start MySQL and wait until it is healthy
 make load    # download the data, create the schema and load it
 make mysql   # open a MySQL shell
+make dump    # export sales_data to a SQL file
 ```
 
 Run `make` to list every command. `make down` stops the services and keeps the data. `make reset` also deletes the database volume.
@@ -76,8 +78,8 @@ Run `make` to list every command. `make down` stops the services and keeps the d
 ├── docs/                   Architecture notes and images
 └── modules/
     ├── 01-oltp-mysql/
-    │   ├── sql/            Database, schema and load statements
-    │   ├── scripts/        Data download script
+    │   ├── sql/            Database, schema, load and index statements
+    │   ├── scripts/        Data download and dump scripts
     │   └── data/           Downloaded files (git-ignored)
     ├── 02-nosql-mongodb/
     ├── 03-data-warehouse/
