@@ -6,7 +6,7 @@ MODULE_2 := modules/02-nosql-mongodb
 # MYSQL_PWD keeps the password off the command line and silences the client's warning about it.
 MYSQL_CLIENT := sh -c 'MYSQL_PWD="$$MYSQL_ROOT_PASSWORD" exec mysql --user=root'
 
-.PHONY: help setup up admin down ps logs mysql mongo download load load-oltp load-catalog dump export-catalog reset lint format
+.PHONY: help setup up admin down ps logs mysql mongo psql download load load-oltp load-catalog dump export-catalog reset lint format
 
 help: ## Show available commands
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-10s %s\n", $$1, $$2}'
@@ -15,10 +15,10 @@ setup: ## Create the uv environment and a local .env
 	uv sync
 	@test -f .env || { cp .env.example .env; echo "Created .env, now replace its placeholder password."; }
 
-up: ## Start MySQL and MongoDB and wait until they are healthy
-	$(COMPOSE) up --detach --wait mysql mongo
+up: ## Start all databases and wait until they are healthy
+	$(COMPOSE) up --detach --wait mysql mongo postgres
 
-admin: ## Start MySQL and phpMyAdmin
+admin: ## Start all databases with phpMyAdmin and pgAdmin
 	$(COMPOSE) --profile admin up --detach --wait
 
 down: ## Stop all services and keep the data
@@ -35,6 +35,9 @@ mysql: ## Open a MySQL shell as root
 
 mongo: ## Open a MongoDB shell as root
 	$(COMPOSE) exec mongo sh -c 'exec mongosh --quiet --username root --password "$$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin'
+
+psql: ## Open a PostgreSQL shell
+	$(COMPOSE) exec postgres psql --username=postgres
 
 download: ## Download the raw data for all modules
 	bash $(MODULE_1)/scripts/download_data.sh

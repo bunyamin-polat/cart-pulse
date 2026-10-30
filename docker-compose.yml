@@ -48,6 +48,43 @@ services:
       retries: 12
       start_period: 20s
 
+  postgres:
+    image: postgres:16.4
+    container_name: cartpulse-postgres
+    restart: unless-stopped
+    # POSTGRES_DB is left unset on purpose: softcart and staging are created in the lab.
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5434}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "--username=postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  pgadmin:
+    image: dpage/pgadmin4:8.12
+    container_name: cartpulse-pgadmin
+    restart: unless-stopped
+    profiles: [admin]
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      # Desktop mode skips the login screen, which is safe because the port is localhost-only.
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    ports:
+      - "127.0.0.1:${PGADMIN_PORT:-5050}:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./modules/03-data-warehouse/pgadmin/servers.json:/pgadmin4/servers.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   phpmyadmin:
     image: phpmyadmin:5.2.1
     container_name: cartpulse-phpmyadmin
@@ -65,3 +102,5 @@ services:
 volumes:
   mysql_data:
   mongo_data:
+  postgres_data:
+  pgadmin_data:
