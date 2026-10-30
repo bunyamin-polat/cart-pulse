@@ -3,10 +3,12 @@
 COMPOSE := docker compose
 MODULE_1 := modules/01-oltp-mysql
 MODULE_2 := modules/02-nosql-mongodb
+MODULE_3 := modules/03-data-warehouse
+PSQL := $(COMPOSE) exec -T postgres psql --username=postgres --set=ON_ERROR_STOP=1
 # MYSQL_PWD keeps the password off the command line and silences the client's warning about it.
 MYSQL_CLIENT := sh -c 'MYSQL_PWD="$$MYSQL_ROOT_PASSWORD" exec mysql --user=root'
 
-.PHONY: help setup up admin down ps logs mysql mongo psql download load load-oltp load-catalog dump export-catalog reset lint format
+.PHONY: help setup up admin down ps logs mysql mongo psql download load load-oltp load-catalog warehouse-schema dump export-catalog reset lint format
 
 help: ## Show available commands
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-10s %s\n", $$1, $$2}'
@@ -53,6 +55,10 @@ load-oltp: download ## Create the schema and load the OLTP data
 
 load-catalog: download ## Load the product catalog into MongoDB
 	bash $(MODULE_2)/scripts/load_catalog.sh
+
+warehouse-schema: ## Create the staging database and star schema (safe to re-run)
+	$(PSQL) < $(MODULE_3)/sql/01_create_database.sql
+	$(PSQL) --dbname=staging < $(MODULE_3)/sql/02_create_schema.sql
 
 dump: ## Export sales_data to sales_data.sql
 	bash $(MODULE_1)/scripts/datadump.sh
