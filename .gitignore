@@ -21,6 +21,5 @@ submission/
 # OS and editor
 .DS_Store
 .claude/
-.github/
 .idea/
 .vscode/
