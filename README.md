@@ -28,7 +28,7 @@ flowchart LR
 ## Roadmap
 
 | # | Module | Stack | Status |
-|---|--------|-------|--------|
+| --- | ------ | ----- | ------ |
 | 1 | OLTP database | MySQL | 🚧 In progress |
 | 2 | NoSQL product catalog | MongoDB | ⏳ Planned |
 | 3 | Data warehouse and reporting | PostgreSQL | ⏳ Planned |
@@ -49,8 +49,8 @@ flowchart LR
 Requires [Docker](https://docs.docker.com/get-docker/), [uv](https://docs.astral.sh/uv/) and `make`.
 
 ```bash
-git clone https://github.com/bunyamin-polat/cartpulse-data-platform.git
-cd cartpulse-data-platform
+git clone https://github.com/bunyamin-polat/cart-pulse.git
+cd cart-pulse
 
 make setup   # create the Python environment and .env
 ```
