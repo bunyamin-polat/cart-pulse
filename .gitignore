@@ -1,0 +1,23 @@
+# Secrets: only .env.example is committed
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.ruff_cache/
+
+# Downloaded or generated data is reproducible through scripts, so it stays out of git
+modules/*/data/*
+!modules/*/data/.gitkeep
+*.sql.gz
+sales_data.sql
+
+# OS and editor
+.DS_Store
+.claude/
+.github/
+.idea/
+.vscode/
