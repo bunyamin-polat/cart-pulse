@@ -1,4 +1,4 @@
-"""Train, save and reload a small model that predicts infant weight from height."""
+"""Train, save and reload a small model, to show that a saved model is enough."""
 
 from pyspark.ml.feature import VectorAssembler
 from pyspark.ml.regression import LinearRegression, LinearRegressionModel
@@ -31,7 +31,7 @@ def predict(spark, model, height):
 
 
 def main():
-    spark = SparkSession.builder.appName("BabyWeight").getOrCreate()
+    spark = SparkSession.builder.appName("ModelPersistence").getOrCreate()
     spark.sparkContext.setLogLevel("ERROR")
 
     data = spark.createDataFrame(HEIGHT_AND_WEIGHT, ["height", "weight"])

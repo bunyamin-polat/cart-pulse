@@ -1,6 +1,6 @@
 # Architecture
 
-CartPulse moves retail data from operational stores into a warehouse that serves dashboards and sales forecasting.
+CartPulse moves retail data from operational stores into a warehouse that serves analytical reports and sales forecasting.
 
 ```mermaid
 flowchart LR
@@ -9,25 +9,28 @@ flowchart LR
     subgraph sources[Operational stores]
         mysql[(MySQL<br/>sales transactions)]
         mongo[(MongoDB<br/>product catalog)]
+        log[Web server log]
     end
 
     subgraph processing[Processing]
-        airflow[Airflow<br/>ETL pipelines]
+        etl[Python ETL<br/>incremental load]
+        airflow[Airflow DAG<br/>daily log pipeline]
     end
 
     subgraph analytics[Analytics]
         pg[(PostgreSQL<br/>star schema)]
-        bi[BI dashboards]
         spark[Spark ML<br/>sales forecasting]
+        archive[weblog.tar]
     end
 
     web --> mysql
     web --> mongo
-    mysql --> airflow
-    mongo --> airflow
-    airflow --> pg
-    pg --> bi
+    web --> log
+    mysql --> etl
+    etl --> pg
     pg --> spark
+    log --> airflow
+    airflow --> archive
 ```
 
 ## Components
@@ -37,18 +40,17 @@ flowchart LR
 | MySQL | Records sales with low write latency | 1 | ✅ Built |
 | MongoDB | Stores the flexible product catalog | 2 | ✅ Built |
 | PostgreSQL | Holds fact and dimension tables for reporting | 3 | ✅ Built |
-| BI dashboard | Presents retail metrics | 4 | ⏳ Planned |
-| Python ETL and Airflow | Copy new sales to the warehouse and process the web log | 5 | ✅ Built |
-| Spark ML | Analyzes search terms and projects future sales | 6 | ✅ Built |
+| Python ETL and Airflow | Copy new sales to the warehouse and process the web log | 4 | ✅ Built |
+| Spark ML | Analyzes search terms and projects future sales | 5 | ✅ Built |
 
 ## Data flow
 
 1. The website writes transactions to MySQL and reads product data from MongoDB.
 2. A Python ETL job copies new sales from MySQL to PostgreSQL, using the highest `rowid` as a high-water mark.
 3. Airflow runs a daily pipeline that extracts, filters and archives the web server log.
-4. Dashboards and Spark ML read from the warehouse, so analytics never compete with live transactions.
+4. Reports and Spark ML read from the warehouse, so analytics never compete with live transactions.
 
-Each module uses the datasets of its course lab, so the flow above shows the target design. The catalog does not feed the warehouse yet, and Airflow does not schedule the Python ETL yet.
+Each module uses the dataset of its course lab, so the modules run independently. The catalog does not feed the warehouse yet, and Airflow does not schedule the Python ETL yet.
 
 ## Why separate stores
 

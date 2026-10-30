@@ -1,4 +1,4 @@
-# Module 6: Big Data Analytics with Spark
+# Module 5: Big Data Analytics with Spark
 
 ## Goal
 
@@ -14,7 +14,7 @@ make up
 make load-warehouse    # the forecast trains on warehouse data
 make spark-build
 make spark-search      # analyze the search terms
-make spark-baby        # practice saving and loading a model
+make spark-persistence # save and reload a small example model
 make spark-forecast    # train the sales model and forecast 2023
 ```
 
@@ -35,7 +35,7 @@ The next four terms are `mobile 5g` (2,301), `mobile latest` (1,327), `laptop` (
 
 ## Saving and loading a model
 
-[baby_weight.py](jobs/baby_weight.py) trains a linear regression on seven height and weight pairs, saves it, reloads it from disk and predicts. It gives 7.86 kg at 70 cm and 3.47 kg at 50 cm. Separating training from serving is the core MLOps idea here: a saved model can make predictions without being trained again.
+[model_persistence.py](jobs/model_persistence.py) trains a linear regression on seven height and weight pairs, saves it, reloads it from disk and predicts. It gives 7.86 kg at 70 cm and 3.47 kg at 50 cm. Separating training from serving is the core MLOps idea here: a saved model can make predictions without being trained again.
 
 ## Sales forecast
 

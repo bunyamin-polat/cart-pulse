@@ -81,7 +81,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./modules/03-data-warehouse/data:/import:ro
-      - ./modules/05-etl-airflow/data:/import-etl:ro
+      - ./modules/04-etl-airflow/data:/import-etl:ro
     healthcheck:
       test: ["CMD", "pg_isready", "--username=postgres"]
       interval: 5s
@@ -113,7 +113,8 @@ services:
     container_name: cartpulse-airflow
     restart: unless-stopped
     profiles: [airflow]
-    command: standalone
+    # A pid file left in the volume by the last run would stop the webserver from starting.
+    command: ["bash", "-c", "rm -f /opt/airflow/*.pid && exec airflow standalone"]
     environment:
       AIRFLOW__CORE__LOAD_EXAMPLES: "False"
       # New DAGs stay paused until they are unpaused on purpose.
@@ -122,8 +123,8 @@ services:
       - "127.0.0.1:${AIRFLOW_PORT:-8088}:8080"
     volumes:
       - airflow_home:/opt/airflow
-      - ./modules/05-etl-airflow/dags:/opt/airflow/dags:ro
-      - ./modules/05-etl-airflow/data:/opt/airflow/data
+      - ./modules/04-etl-airflow/dags:/opt/airflow/dags:ro
+      - ./modules/04-etl-airflow/data:/opt/airflow/data
     healthcheck:
       test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8080/health"]
       interval: 10s
@@ -133,13 +134,13 @@ services:
 
   # Runs one job and exits, through `docker compose run`.
   spark:
-    build: ./modules/06-spark-ml
+    build: ./modules/05-spark-ml
     image: cartpulse-spark:4.2.0
     profiles: [spark]
     working_dir: /opt/cartpulse
     volumes:
-      - ./modules/06-spark-ml/jobs:/opt/cartpulse/jobs:ro
-      - ./modules/06-spark-ml/data:/opt/cartpulse/data
+      - ./modules/05-spark-ml/jobs:/opt/cartpulse/jobs:ro
+      - ./modules/05-spark-ml/data:/opt/cartpulse/data
 
   phpmyadmin:
     image: phpmyadmin:5.2.1

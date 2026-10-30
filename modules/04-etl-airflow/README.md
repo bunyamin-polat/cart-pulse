@@ -1,4 +1,4 @@
-# Module 5: ETL Pipelines with Python and Airflow
+# Module 4: ETL Pipelines with Python and Airflow
 
 ## Goal
 

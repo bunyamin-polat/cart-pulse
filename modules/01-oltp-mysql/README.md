@@ -11,11 +11,11 @@ From the repository root:
 ```bash
 make setup   # then replace the placeholder password in .env
 make up
-make load
+make load-oltp
 make dump
 ```
 
-`make load` is safe to re-run. It leaves the same 2,605 rows and one `ts` index every time.
+`make load-oltp` is safe to re-run. It leaves the same 2,605 rows and one `ts` index every time.
 
 ## Design decisions
 
@@ -33,9 +33,9 @@ Every column is `NOT NULL`, because a sale with a missing field is a data qualit
 
 ### Why an index on `timestamp`
 
-Module 5 will export new sales to the warehouse every day by filtering on time. A B-tree index lets those range queries avoid a full table scan as the table grows.
+Module 4 will export new sales to the warehouse every day by filtering on time. A B-tree index lets those range queries avoid a full table scan as the table grows.
 
-Each index also adds work to every `INSERT`, so this write-heavy table carries only the one index it needs. `make load` builds it after the bulk load, because building it once is cheaper than updating it row by row.
+Each index also adds work to every `INSERT`, so this write-heavy table carries only the one index it needs. `make load-oltp` builds it after the bulk load, because building it once is cheaper than updating it row by row.
 
 ### OLTP vs OLAP
 
@@ -96,7 +96,7 @@ Inspection before the load showed:
 | Time range | 2020-09-05 16:20:03 to 17:03:27 |
 | Index | `ts` on `timestamp` (BTREE) |
 | Dump | 118 KB, restored to 2,605 rows in a separate database |
-| Clean install | Passed from a fresh clone, including a second `make load` |
+| Clean install | Passed from a fresh clone, including a second load |
 
 The dataset covers about 43 minutes of sales, so later modules should not assume it spans multiple days.
 
