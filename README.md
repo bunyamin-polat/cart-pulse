@@ -33,7 +33,7 @@ See [docs/architecture.md](docs/architecture.md) for the data flow and design ra
 | --- | ------ | ----- | ------ |
 | 1 | [OLTP database](modules/01-oltp-mysql/README.md) | MySQL | ✅ Done |
 | 2 | [NoSQL product catalog](modules/02-nosql-mongodb/README.md) | MongoDB | ✅ Done |
-| 3 | Data warehouse and reporting | PostgreSQL | 🚧 In progress |
+| 3 | [Data warehouse and reporting](modules/03-data-warehouse/README.md) | PostgreSQL | ✅ Done |
 | 4 | BI dashboard | Looker Studio or Cognos Analytics | ⏳ Planned |
 | 5 | ETL pipelines | Python, Airflow | ⏳ Planned |
 | 6 | Sales projections | Spark ML | ⏳ Planned |
@@ -41,10 +41,11 @@ See [docs/architecture.md](docs/architecture.md) for the data flow and design ra
 ### Highlights
 
 - MySQL 8.0 runs in Docker Compose with a health check and a non-root user
-- A single command loads all 2,605 transactions and 438 catalog documents, and is safe to re-run
+- A single command loads 2,605 transactions, 438 catalog documents and 300,000 warehouse sales, and is safe to re-run
 - A `ts` index supports time-based incremental exports
 - `datadump.sh` backups are verified by restoring every row
 - MongoDB stores products with different attributes in one collection
+- A PostgreSQL star schema answers reports with `GROUPING SETS`, `ROLLUP`, `CUBE` and a materialized view
 - Setup is tested from a fresh clone
 
 ## Quick start
@@ -67,6 +68,7 @@ make mysql   # open a MySQL shell
 make mongo   # open a MongoDB shell
 make psql    # open a PostgreSQL shell
 make dump    # export sales_data to a SQL file
+make warehouse-reports   # run the warehouse analytics queries
 ```
 
 Run `make` to list every command. `make down` stops the services and keeps the data. `make reset` also deletes the database volume.
