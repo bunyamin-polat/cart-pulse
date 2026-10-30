@@ -22,3 +22,4 @@ download() {
 
 download "${BASE_URL}/IBM-DB0321EN-SkillsNetwork/ETL/sales.sql" "sales.sql"
 download "${BASE_URL}/sales-csv3mo8i5SHvta76u7DzUfhiw.csv" "sales.csv"
+download "${BASE_URL}/IBM-DB0321EN-SkillsNetwork/ETL/accesslog.txt" "accesslog.txt"

@@ -108,6 +108,29 @@ services:
       postgres:
         condition: service_healthy
 
+  airflow:
+    image: apache/airflow:2.10.5
+    container_name: cartpulse-airflow
+    restart: unless-stopped
+    profiles: [airflow]
+    command: standalone
+    environment:
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      # New DAGs stay paused until they are unpaused on purpose.
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "True"
+    ports:
+      - "127.0.0.1:${AIRFLOW_PORT:-8088}:8080"
+    volumes:
+      - airflow_home:/opt/airflow
+      - ./modules/05-etl-airflow/dags:/opt/airflow/dags:ro
+      - ./modules/05-etl-airflow/data:/opt/airflow/data
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+
   phpmyadmin:
     image: phpmyadmin:5.2.1
     container_name: cartpulse-phpmyadmin
@@ -128,3 +151,4 @@ volumes:
   mongo_data:
   postgres_data:
   pgadmin_data:
+  airflow_home:

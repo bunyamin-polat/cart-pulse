@@ -9,7 +9,7 @@ PSQL := $(COMPOSE) exec -T postgres psql --username=postgres --set=ON_ERROR_STOP
 # MYSQL_PWD keeps the password off the command line and silences the client's warning about it.
 MYSQL_CLIENT := sh -c 'MYSQL_PWD="$$MYSQL_ROOT_PASSWORD" exec mysql --user=root'
 
-.PHONY: help setup up admin down ps logs mysql mysql-etl mongo psql download load load-oltp load-catalog load-warehouse warehouse-schema warehouse-reports dump export-catalog reset lint format
+.PHONY: help setup up admin airflow airflow-password down ps logs mysql mysql-etl mongo psql download load load-oltp load-catalog load-warehouse warehouse-schema warehouse-reports dump export-catalog reset lint format
 
 help: ## Show available commands
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-10s %s\n", $$1, $$2}'
@@ -24,11 +24,17 @@ up: ## Start all databases and wait until they are healthy
 admin: ## Start all databases with phpMyAdmin and pgAdmin
 	$(COMPOSE) --profile admin up --detach --wait
 
+airflow: ## Start Apache Airflow
+	$(COMPOSE) --profile airflow up --detach --wait airflow
+
+airflow-password: ## Show the generated Airflow admin password
+	$(COMPOSE) exec airflow sh -c 'cat /opt/airflow/standalone_admin_password.txt; echo'
+
 down: ## Stop all services and keep the data
-	$(COMPOSE) --profile admin down
+	$(COMPOSE) --profile admin --profile airflow down
 
 ps: ## Show service status
-	$(COMPOSE) --profile admin ps
+	$(COMPOSE) --profile admin --profile airflow ps
 
 logs: ## Follow MySQL logs
 	$(COMPOSE) logs --follow mysql
@@ -81,7 +87,7 @@ export-catalog: ## Export the catalog to electronics.csv
 	bash $(MODULE_2)/scripts/export_catalog.sh
 
 reset: ## Stop all services and DELETE the database volume
-	$(COMPOSE) --profile admin down --volumes
+	$(COMPOSE) --profile admin --profile airflow down --volumes
 
 lint: ## Check imports and formatting without changing files
 	uv run ruff check .
