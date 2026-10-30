@@ -3,7 +3,7 @@
 An end-to-end e-commerce data platform that takes retail transactions from an OLTP database to warehouse analytics, dashboards and sales forecasting.
 
 ![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?logo=mysql&logoColor=white)
-![MongoDB](https://img.shields.io/badge/MongoDB-planned-47A248?logo=mongodb&logoColor=white)
+![MongoDB](https://img.shields.io/badge/MongoDB-7.0-47A248?logo=mongodb&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-planned-4169E1?logo=postgresql&logoColor=white)
 ![Airflow](https://img.shields.io/badge/Airflow-planned-017CEE?logo=apacheairflow&logoColor=white)
 ![Spark](https://img.shields.io/badge/Spark-planned-E25A1C?logo=apachespark&logoColor=white)
@@ -32,18 +32,19 @@ See [docs/architecture.md](docs/architecture.md) for the data flow and design ra
 | # | Module | Stack | Status |
 | --- | ------ | ----- | ------ |
 | 1 | [OLTP database](modules/01-oltp-mysql/README.md) | MySQL | ✅ Done |
-| 2 | NoSQL product catalog | MongoDB | 🚧 In progress |
+| 2 | [NoSQL product catalog](modules/02-nosql-mongodb/README.md) | MongoDB | ✅ Done |
 | 3 | Data warehouse and reporting | PostgreSQL | ⏳ Planned |
 | 4 | BI dashboard | Looker Studio or Cognos Analytics | ⏳ Planned |
 | 5 | ETL pipelines | Python, Airflow | ⏳ Planned |
 | 6 | Sales projections | Spark ML | ⏳ Planned |
 
-### Module 1 highlights
+### Highlights
 
 - MySQL 8.0 runs in Docker Compose with a health check and a non-root user
-- A single command loads all 2,605 transactions and is safe to re-run
+- A single command loads all 2,605 transactions and 438 catalog documents, and is safe to re-run
 - A `ts` index supports time-based incremental exports
 - `datadump.sh` backups are verified by restoring every row
+- MongoDB stores products with different attributes in one collection
 - Setup is tested from a fresh clone
 
 ## Quick start
@@ -61,8 +62,9 @@ Replace the placeholder passwords in `.env` before the first start, because each
 
 ```bash
 make up      # start MySQL and MongoDB and wait until they are healthy
-make load    # download the data, create the schema and load it
+make load    # download the data, create the schemas and load them
 make mysql   # open a MySQL shell
+make mongo   # open a MongoDB shell
 make dump    # export sales_data to a SQL file
 ```
 

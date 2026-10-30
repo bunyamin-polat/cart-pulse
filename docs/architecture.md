@@ -35,7 +35,7 @@ flowchart LR
 | Component | Role | Module | Status |
 | --- | --- | --- | --- |
 | MySQL | Records sales with low write latency | 1 | ✅ Built |
-| MongoDB | Stores the flexible product catalog | 2 | ⏳ Planned |
+| MongoDB | Stores the flexible product catalog | 2 | ✅ Built |
 | PostgreSQL | Holds fact and dimension tables for reporting | 3 | ⏳ Planned |
 | BI dashboard | Presents retail metrics | 4 | ⏳ Planned |
 | Airflow | Schedules extraction and loading into the warehouse | 5 | ⏳ Planned |
