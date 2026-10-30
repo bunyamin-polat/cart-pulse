@@ -5,11 +5,13 @@ MODULE_1 := modules/01-oltp-mysql
 MODULE_2 := modules/02-nosql-mongodb
 MODULE_3 := modules/03-data-warehouse
 MODULE_5 := modules/05-etl-airflow
+MODULE_6 := modules/06-spark-ml
+SPARK_SUBMIT := $(COMPOSE) --profile spark run --rm spark /opt/spark/bin/spark-submit --master 'local[*]' --conf spark.ui.enabled=false
 PSQL := $(COMPOSE) exec -T postgres psql --username=postgres --set=ON_ERROR_STOP=1
 # MYSQL_PWD keeps the password off the command line and silences the client's warning about it.
 MYSQL_CLIENT := sh -c 'MYSQL_PWD="$$MYSQL_ROOT_PASSWORD" exec mysql --user=root'
 
-.PHONY: help setup up admin airflow airflow-password down ps logs mysql mysql-etl mongo psql download load load-oltp load-catalog load-warehouse load-etl run-etl warehouse-schema warehouse-reports dump export-catalog reset lint format
+.PHONY: help setup up admin airflow airflow-password spark-build spark-search spark-baby spark-forecast down ps logs mysql mysql-etl mongo psql download load load-oltp load-catalog load-warehouse load-etl run-etl warehouse-schema warehouse-reports dump export-catalog reset lint format
 
 help: ## Show available commands
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-10s %s\n", $$1, $$2}'
@@ -27,14 +29,27 @@ admin: ## Start all databases with phpMyAdmin and pgAdmin
 airflow: ## Start Apache Airflow
 	$(COMPOSE) --profile airflow up --detach --wait airflow
 
+spark-build: ## Build the Spark image
+	$(COMPOSE) --profile spark build spark
+
+spark-search: download ## Analyze the search terms
+	$(SPARK_SUBMIT) jobs/search_terms.py
+
+spark-baby: ## Train, save and reload the practice model
+	$(SPARK_SUBMIT) jobs/baby_weight.py
+
+spark-forecast: ## Train the sales model on warehouse data and forecast 2023
+	$(PSQL) --dbname=Test1 --quiet < $(MODULE_6)/sql/export_monthly_sales.sql > $(MODULE_6)/data/monthly_sales.csv
+	$(SPARK_SUBMIT) jobs/sales_forecast.py
+
 airflow-password: ## Show the generated Airflow admin password
 	$(COMPOSE) exec airflow sh -c 'cat /opt/airflow/standalone_admin_password.txt; echo'
 
 down: ## Stop all services and keep the data
-	$(COMPOSE) --profile admin --profile airflow down
+	$(COMPOSE) --profile admin --profile airflow --profile spark down
 
 ps: ## Show service status
-	$(COMPOSE) --profile admin --profile airflow ps
+	$(COMPOSE) --profile admin --profile airflow --profile spark ps
 
 logs: ## Follow MySQL logs
 	$(COMPOSE) logs --follow mysql
@@ -56,6 +71,7 @@ download: ## Download the raw data for all modules
 	bash $(MODULE_2)/scripts/download_data.sh
 	bash $(MODULE_3)/scripts/download_data.sh
 	bash $(MODULE_5)/scripts/download_data.sh
+	bash $(MODULE_6)/scripts/download_data.sh
 
 load: load-oltp load-catalog load-warehouse load-etl ## Load all data (safe to re-run)
 
@@ -96,7 +112,7 @@ export-catalog: ## Export the catalog to electronics.csv
 	bash $(MODULE_2)/scripts/export_catalog.sh
 
 reset: ## Stop all services and DELETE the database volume
-	$(COMPOSE) --profile admin --profile airflow down --volumes
+	$(COMPOSE) --profile admin --profile airflow --profile spark down --volumes
 
 lint: ## Check imports and formatting without changing files
 	uv run ruff check .
