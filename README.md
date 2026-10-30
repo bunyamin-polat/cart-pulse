@@ -1,7 +1,8 @@
 # CartPulse Data Platform
 
-An end-to-end e-commerce data platform that takes retail transactions from an OLTP database to warehouse analytics, dashboards and sales forecasting.
+An end-to-end e-commerce data platform that takes retail transactions from an OLTP database to warehouse analytics and sales forecasting.
 
+[![CI](https://github.com/bunyamin-polat/cart-pulse/actions/workflows/ci.yml/badge.svg)](https://github.com/bunyamin-polat/cart-pulse/actions/workflows/ci.yml)
 ![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?logo=mysql&logoColor=white)
 ![MongoDB](https://img.shields.io/badge/MongoDB-7.0-47A248?logo=mongodb&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
@@ -18,25 +19,25 @@ An end-to-end e-commerce data platform that takes retail transactions from an OL
 flowchart LR
     web[Website] --> mysql[(MySQL<br/>transactions)]
     web --> mongo[(MongoDB<br/>catalog)]
-    mysql --> airflow[Airflow ETL]
-    mongo --> airflow
-    airflow --> pg[(PostgreSQL<br/>star schema)]
-    pg --> bi[BI dashboards]
+    web --> log[Web server log]
+    mysql --> etl[Python ETL]
+    etl --> pg[(PostgreSQL<br/>star schema)]
     pg --> spark[Spark ML<br/>forecasting]
+    log --> airflow[Airflow DAG]
+    airflow --> archive[weblog.tar]
 ```
 
-See [docs/architecture.md](docs/architecture.md) for the data flow and design rationale.
+Each module uses the dataset of its course lab, so the modules run independently. See [docs/architecture.md](docs/architecture.md) for the data flow and design rationale.
 
-## Roadmap
+## Modules
 
 | # | Module | Stack | Status |
 | --- | ------ | ----- | ------ |
 | 1 | [OLTP database](modules/01-oltp-mysql/README.md) | MySQL | ✅ Done |
 | 2 | [NoSQL product catalog](modules/02-nosql-mongodb/README.md) | MongoDB | ✅ Done |
 | 3 | [Data warehouse and reporting](modules/03-data-warehouse/README.md) | PostgreSQL | ✅ Done |
-| 4 | BI dashboard | Looker Studio or Cognos Analytics | ⏳ Planned |
-| 5 | [ETL pipelines](modules/05-etl-airflow/README.md) | Python, Airflow | ✅ Done |
-| 6 | [Sales projections](modules/06-spark-ml/README.md) | Spark ML | ✅ Done |
+| 4 | [ETL pipelines](modules/04-etl-airflow/README.md) | Python, Airflow | ✅ Done |
+| 5 | [Sales projections](modules/05-spark-ml/README.md) | Spark ML | ✅ Done |
 
 ### Highlights
 
@@ -49,7 +50,7 @@ See [docs/architecture.md](docs/architecture.md) for the data flow and design ra
 - A Python ETL copies only new rows, and a second run moves nothing
 - An Airflow DAG processes the web server log every day
 - Spark jobs analyze search terms and forecast sales, with a backtest against a plain average
-- Setup is tested from a fresh clone
+- CI runs linting and unit tests on every push, and an integration workflow tests the ETL on real databases
 
 ## Quick start
 
@@ -67,18 +68,19 @@ Replace the placeholder passwords in `.env` before the first start, because each
 ```bash
 make up      # start all databases and wait until they are healthy
 make load    # download the data, create the schemas and load them
-make mysql   # open a MySQL shell
-make mongo   # open a MongoDB shell
-make psql    # open a PostgreSQL shell
-make dump    # export sales_data to a SQL file
-make warehouse-reports   # run the warehouse analytics queries
-make run-etl   # copy new rows from the ETL source to the warehouse
-make airflow   # start Apache Airflow
-make spark-build      # build the Spark image
-make spark-forecast   # train the sales model and forecast 2023
 ```
 
-Run `make` to list every command. `make down` stops the services and keeps the data. `make reset` also deletes the database volume.
+Then try the pipelines:
+
+```bash
+make warehouse-reports   # run the warehouse analytics queries
+make run-etl             # copy new rows from the ETL source to the warehouse
+make airflow             # start Apache Airflow
+make spark-build         # build the Spark image
+make spark-forecast      # train the sales model and forecast 2023
+```
+
+Run `make` to list every command. `make down` stops the services and keeps the data. `make reset` deletes every data volume.
 
 ## Project structure
 
@@ -88,7 +90,9 @@ Run `make` to list every command. `make down` stops the services and keeps the d
 ├── Makefile                Common commands
 ├── pyproject.toml          Python tooling (uv, Ruff)
 ├── .env.example            Configuration template
+├── .github/workflows/      CI and integration tests
 ├── docs/                   Architecture notes and images
+├── tests/                  Unit tests
 └── modules/
     ├── 01-oltp-mysql/
     │   ├── sql/            Database, schema, load and index statements
@@ -96,9 +100,8 @@ Run `make` to list every command. `make down` stops the services and keeps the d
     │   └── data/           Downloaded files (git-ignored)
     ├── 02-nosql-mongodb/
     ├── 03-data-warehouse/
-    ├── 04-bi-dashboard/
-    ├── 05-etl-airflow/
-    └── 06-spark-ml/
+    ├── 04-etl-airflow/
+    └── 05-spark-ml/
 ```
 
 ## Development
@@ -108,7 +111,10 @@ Python tooling is managed with uv. Ruff handles both import sorting (isort rules
 ```bash
 make lint     # check without changing files
 make format   # apply fixes
+make test     # run the unit tests
 ```
+
+CI runs linting, shell checks, Compose validation and unit tests on every push. The integration workflow starts real MySQL and PostgreSQL services and runs the ETL twice. It runs weekly and on demand, because it downloads the course data.
 
 ## Acknowledgment
 
