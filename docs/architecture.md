@@ -38,15 +38,17 @@ flowchart LR
 | MongoDB | Stores the flexible product catalog | 2 | ✅ Built |
 | PostgreSQL | Holds fact and dimension tables for reporting | 3 | ✅ Built |
 | BI dashboard | Presents retail metrics | 4 | ⏳ Planned |
-| Airflow | Schedules extraction and loading into the warehouse | 5 | ⏳ Planned |
+| Python ETL and Airflow | Copy new sales to the warehouse and process the web log | 5 | ✅ Built |
 | Spark ML | Projects future sales | 6 | ⏳ Planned |
 
 ## Data flow
 
 1. The website writes transactions to MySQL and reads product data from MongoDB.
-2. Airflow extracts new rows from MySQL, using the `ts` index to filter by time, and reads catalog data from MongoDB.
-3. Airflow transforms the data and loads it into the PostgreSQL star schema.
+2. A Python ETL job copies new sales from MySQL to PostgreSQL, using the highest `rowid` as a high-water mark.
+3. Airflow runs a daily pipeline that extracts, filters and archives the web server log.
 4. Dashboards and Spark ML read from the warehouse, so analytics never compete with live transactions.
+
+Each module uses the datasets of its course lab, so the flow above shows the target design. The catalog does not feed the warehouse yet, and Airflow does not schedule the Python ETL yet.
 
 ## Why separate stores
 
