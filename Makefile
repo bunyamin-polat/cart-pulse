@@ -6,7 +6,7 @@ MODULE_2 := modules/02-nosql-mongodb
 # MYSQL_PWD keeps the password off the command line and silences the client's warning about it.
 MYSQL_CLIENT := sh -c 'MYSQL_PWD="$$MYSQL_ROOT_PASSWORD" exec mysql --user=root'
 
-.PHONY: help setup up admin down ps logs mysql mongo download load dump reset lint format
+.PHONY: help setup up admin down ps logs mysql mongo download load load-oltp load-catalog dump export-catalog reset lint format
 
 help: ## Show available commands
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-10s %s\n", $$1, $$2}'
@@ -40,14 +40,22 @@ download: ## Download the raw data for all modules
 	bash $(MODULE_1)/scripts/download_data.sh
 	bash $(MODULE_2)/scripts/download_data.sh
 
-load: download ## Create the schema and load the OLTP data (safe to re-run)
+load: load-oltp load-catalog ## Load all data (safe to re-run)
+
+load-oltp: download ## Create the schema and load the OLTP data
 	cat $(MODULE_1)/sql/01_create_database.sql \
 		$(MODULE_1)/sql/02_create_sales_data.sql \
 		$(MODULE_1)/sql/03_load_sales_data.sql \
 		$(MODULE_1)/sql/04_create_index.sql | $(COMPOSE) exec -T mysql $(MYSQL_CLIENT)
 
+load-catalog: download ## Load the product catalog into MongoDB
+	bash $(MODULE_2)/scripts/load_catalog.sh
+
 dump: ## Export sales_data to sales_data.sql
 	bash $(MODULE_1)/scripts/datadump.sh
+
+export-catalog: ## Export the catalog to electronics.csv
+	bash $(MODULE_2)/scripts/export_catalog.sh
 
 reset: ## Stop all services and DELETE the database volume
 	$(COMPOSE) --profile admin down --volumes
