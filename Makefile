@@ -4,11 +4,12 @@ COMPOSE := docker compose
 MODULE_1 := modules/01-oltp-mysql
 MODULE_2 := modules/02-nosql-mongodb
 MODULE_3 := modules/03-data-warehouse
+MODULE_5 := modules/05-etl-airflow
 PSQL := $(COMPOSE) exec -T postgres psql --username=postgres --set=ON_ERROR_STOP=1
 # MYSQL_PWD keeps the password off the command line and silences the client's warning about it.
 MYSQL_CLIENT := sh -c 'MYSQL_PWD="$$MYSQL_ROOT_PASSWORD" exec mysql --user=root'
 
-.PHONY: help setup up admin down ps logs mysql mongo psql download load load-oltp load-catalog load-warehouse warehouse-schema warehouse-reports dump export-catalog reset lint format
+.PHONY: help setup up admin down ps logs mysql mysql-etl mongo psql download load load-oltp load-catalog load-warehouse warehouse-schema warehouse-reports dump export-catalog reset lint format
 
 help: ## Show available commands
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-10s %s\n", $$1, $$2}'
@@ -18,7 +19,7 @@ setup: ## Create the uv environment and a local .env
 	@test -f .env || { cp .env.example .env; echo "Created .env, now replace its placeholder password."; }
 
 up: ## Start all databases and wait until they are healthy
-	$(COMPOSE) up --detach --wait mysql mongo postgres
+	$(COMPOSE) up --detach --wait mysql mysql-etl mongo postgres
 
 admin: ## Start all databases with phpMyAdmin and pgAdmin
 	$(COMPOSE) --profile admin up --detach --wait
@@ -35,6 +36,9 @@ logs: ## Follow MySQL logs
 mysql: ## Open a MySQL shell as root
 	$(COMPOSE) exec mysql $(MYSQL_CLIENT)
 
+mysql-etl: ## Open a MySQL shell on the ETL source
+	$(COMPOSE) exec mysql-etl $(MYSQL_CLIENT)
+
 mongo: ## Open a MongoDB shell as root
 	$(COMPOSE) exec mongo sh -c 'exec mongosh --quiet --username root --password "$$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin'
 
@@ -45,6 +49,7 @@ download: ## Download the raw data for all modules
 	bash $(MODULE_1)/scripts/download_data.sh
 	bash $(MODULE_2)/scripts/download_data.sh
 	bash $(MODULE_3)/scripts/download_data.sh
+	bash $(MODULE_5)/scripts/download_data.sh
 
 load: load-oltp load-catalog load-warehouse ## Load all data (safe to re-run)
 
