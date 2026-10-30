@@ -25,25 +25,26 @@ flowchart LR
     pg --> spark[Spark ML<br/>forecasting]
 ```
 
+See [docs/architecture.md](docs/architecture.md) for the data flow and design rationale.
+
 ## Roadmap
 
 | # | Module | Stack | Status |
 | --- | ------ | ----- | ------ |
-| 1 | OLTP database | MySQL | 🚧 In progress |
+| 1 | [OLTP database](modules/01-oltp-mysql/README.md) | MySQL | ✅ Done |
 | 2 | NoSQL product catalog | MongoDB | ⏳ Planned |
 | 3 | Data warehouse and reporting | PostgreSQL | ⏳ Planned |
 | 4 | BI dashboard | Looker Studio or Cognos Analytics | ⏳ Planned |
 | 5 | ETL pipelines | Python, Airflow | ⏳ Planned |
 | 6 | Sales projections | Spark ML | ⏳ Planned |
 
-### Module 1 progress
+### Module 1 highlights
 
-- ✅ MySQL 8.0 running in Docker Compose with a health check
-- ✅ `sales` database and `sales_data` table
-- ✅ Scripted download and idempotent bulk load of 2,605 transactions
-- ✅ `ts` index on `timestamp` for time-based incremental exports
-- ✅ `datadump.sh` backup script, verified with a restore of all rows
-- ⏳ Module documentation
+- MySQL 8.0 runs in Docker Compose with a health check and a non-root user
+- A single command loads all 2,605 transactions and is safe to re-run
+- A `ts` index supports time-based incremental exports
+- `datadump.sh` backups are verified by restoring every row
+- Setup is tested from a fresh clone
 
 ## Quick start
 
