@@ -32,7 +32,7 @@ See [docs/architecture.md](docs/architecture.md) for the data flow and design ra
 | # | Module | Stack | Status |
 | --- | ------ | ----- | ------ |
 | 1 | [OLTP database](modules/01-oltp-mysql/README.md) | MySQL | ✅ Done |
-| 2 | NoSQL product catalog | MongoDB | ⏳ Planned |
+| 2 | NoSQL product catalog | MongoDB | 🚧 In progress |
 | 3 | Data warehouse and reporting | PostgreSQL | ⏳ Planned |
 | 4 | BI dashboard | Looker Studio or Cognos Analytics | ⏳ Planned |
 | 5 | ETL pipelines | Python, Airflow | ⏳ Planned |
@@ -57,10 +57,10 @@ cd cart-pulse
 make setup   # create the Python environment and .env
 ```
 
-Replace the placeholder password in `.env` before the first start, because MySQL stores it when the database volume is created.
+Replace the placeholder passwords in `.env` before the first start, because each database stores its password when its volume is created.
 
 ```bash
-make up      # start MySQL and wait until it is healthy
+make up      # start MySQL and MongoDB and wait until they are healthy
 make load    # download the data, create the schema and load it
 make mysql   # open a MySQL shell
 make dump    # export sales_data to a SQL file
