@@ -59,6 +59,7 @@ services:
       - "127.0.0.1:${POSTGRES_PORT:-5434}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./modules/03-data-warehouse/data:/import:ro
     healthcheck:
       test: ["CMD", "pg_isready", "--username=postgres"]
       interval: 5s

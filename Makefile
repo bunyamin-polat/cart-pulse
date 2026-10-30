@@ -44,6 +44,7 @@ psql: ## Open a PostgreSQL shell
 download: ## Download the raw data for all modules
 	bash $(MODULE_1)/scripts/download_data.sh
 	bash $(MODULE_2)/scripts/download_data.sh
+	bash $(MODULE_3)/scripts/download_data.sh
 
 load: load-oltp load-catalog ## Load all data (safe to re-run)
 
