@@ -74,17 +74,16 @@ Run `make` to list every command. `make down` stops the services and keeps the d
 ├── pyproject.toml          Python tooling (uv, Ruff)
 ├── .env.example            Configuration template
 ├── docs/                   Architecture notes and images
-├── modules/
-│   ├── 01-oltp-mysql/
-│   │   ├── sql/            Database, schema and load statements
-│   │   ├── scripts/        Data download script
-│   │   └── data/           Downloaded files (git-ignored)
-│   ├── 02-nosql-mongodb/
-│   ├── 03-data-warehouse/
-│   ├── 04-bi-dashboard/
-│   ├── 05-etl-airflow/
-│   └── 06-spark-ml/
-└── submission/             Command logs for course grading
+└── modules/
+    ├── 01-oltp-mysql/
+    │   ├── sql/            Database, schema and load statements
+    │   ├── scripts/        Data download script
+    │   └── data/           Downloaded files (git-ignored)
+    ├── 02-nosql-mongodb/
+    ├── 03-data-warehouse/
+    ├── 04-bi-dashboard/
+    ├── 05-etl-airflow/
+    └── 06-spark-ml/
 ```
 
 ## Development

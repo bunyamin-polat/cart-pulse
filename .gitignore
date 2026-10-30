@@ -15,6 +15,9 @@ modules/*/data/*
 *.sql.gz
 sales_data.sql
 
+# Course grading logs stay local
+submission/
+
 # OS and editor
 .DS_Store
 .claude/
