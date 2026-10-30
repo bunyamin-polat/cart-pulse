@@ -8,7 +8,7 @@ PSQL := $(COMPOSE) exec -T postgres psql --username=postgres --set=ON_ERROR_STOP
 # MYSQL_PWD keeps the password off the command line and silences the client's warning about it.
 MYSQL_CLIENT := sh -c 'MYSQL_PWD="$$MYSQL_ROOT_PASSWORD" exec mysql --user=root'
 
-.PHONY: help setup up admin down ps logs mysql mongo psql download load load-oltp load-catalog warehouse-schema dump export-catalog reset lint format
+.PHONY: help setup up admin down ps logs mysql mongo psql download load load-oltp load-catalog load-warehouse warehouse-schema warehouse-reports dump export-catalog reset lint format
 
 help: ## Show available commands
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-10s %s\n", $$1, $$2}'
@@ -46,7 +46,7 @@ download: ## Download the raw data for all modules
 	bash $(MODULE_2)/scripts/download_data.sh
 	bash $(MODULE_3)/scripts/download_data.sh
 
-load: load-oltp load-catalog ## Load all data (safe to re-run)
+load: load-oltp load-catalog load-warehouse ## Load all data (safe to re-run)
 
 load-oltp: download ## Create the schema and load the OLTP data
 	cat $(MODULE_1)/sql/01_create_database.sql \
@@ -60,6 +60,14 @@ load-catalog: download ## Load the product catalog into MongoDB
 warehouse-schema: ## Create the staging database and star schema (safe to re-run)
 	$(PSQL) < $(MODULE_3)/sql/01_create_database.sql
 	$(PSQL) --dbname=staging < $(MODULE_3)/sql/02_create_schema.sql
+
+load-warehouse: download warehouse-schema ## Rebuild the reporting tables and the MQT
+	$(PSQL) < $(MODULE_3)/sql/03_create_reporting_database.sql
+	$(PSQL) --dbname=Test1 < $(MODULE_3)/sql/04_load_reporting_data.sql
+	$(PSQL) --dbname=Test1 < $(MODULE_3)/sql/05_create_mqt.sql
+
+warehouse-reports: ## Run the warehouse analytics queries
+	$(PSQL) --dbname=Test1 < $(MODULE_3)/sql/06_analytics_queries.sql
 
 dump: ## Export sales_data to sales_data.sql
 	bash $(MODULE_1)/scripts/datadump.sh
