@@ -5,7 +5,7 @@ MODULE_1 := modules/01-oltp-mysql
 # MYSQL_PWD keeps the password off the command line and silences the client's warning about it.
 MYSQL_CLIENT := sh -c 'MYSQL_PWD="$$MYSQL_ROOT_PASSWORD" exec mysql --user=root'
 
-.PHONY: help setup up admin down ps logs mysql download load reset lint format
+.PHONY: help setup up admin down ps logs mysql download load dump reset lint format
 
 help: ## Show available commands
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-10s %s\n", $$1, $$2}'
@@ -40,6 +40,9 @@ load: download ## Create the schema and load the OLTP data (safe to re-run)
 		$(MODULE_1)/sql/02_create_sales_data.sql \
 		$(MODULE_1)/sql/03_load_sales_data.sql \
 		$(MODULE_1)/sql/04_create_index.sql | $(COMPOSE) exec -T mysql $(MYSQL_CLIENT)
+
+dump: ## Export sales_data to sales_data.sql
+	bash $(MODULE_1)/scripts/datadump.sh
 
 reset: ## Stop all services and DELETE the database volume
 	$(COMPOSE) --profile admin down --volumes
