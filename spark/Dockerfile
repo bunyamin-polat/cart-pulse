@@ -1,6 +1,6 @@
 # Built on a supported JRE and Python instead of the official Spark image,
 # which ships Python 3.10 and leaves out the NumPy that Spark ML needs.
-FROM eclipse-temurin:21-jre-noble
+FROM eclipse-temurin:24-jre-noble
 
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends python3 python3-venv \
