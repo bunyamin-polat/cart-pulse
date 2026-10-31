@@ -12,6 +12,9 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
+      # MongoDB 8.1 to 8.3 are short-lived releases, while 8.0 is the long-term line.
+      - dependency-name: mongo
+        versions: [">=8.1"]
   - package-ecosystem: docker
     directories:
       - /orchestration
