@@ -16,6 +16,10 @@ export POSTGRES_PORT=15434
 export CARTPULSE_TEST_STACK=1
 
 remove_stack() {
+    local status=$?
+    if [[ "${status}" -ne 0 ]]; then
+        docker compose logs --tail 40
+    fi
     docker compose down --volumes --remove-orphans
 }
 trap remove_stack EXIT
