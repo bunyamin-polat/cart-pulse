@@ -1,7 +1,6 @@
 """Data quality checks that stand between the warehouse and the marts."""
 
 from contextlib import closing
-from decimal import Decimal
 
 # Each query counts violations, so 0 means the check passed.
 WAREHOUSE_CHECKS = {
@@ -14,6 +13,22 @@ WAREHOUSE_CHECKS = {
     """,
     "web_requests_loaded": """
         SELECT CASE WHEN EXISTS (SELECT 1 FROM staging.web_requests) THEN 0 ELSE 1 END
+    """,
+    "web_traffic_matches_log": """
+        SELECT COALESCE(
+            (
+                SELECT CASE
+                    WHEN rows_extracted = rows_changed + rows_excluded + rows_rejected
+                        AND rows_changed = (SELECT COUNT(*) FROM staging.web_requests)
+                    THEN 0 ELSE 1
+                END
+                FROM etl.load_audit
+                WHERE source = 'web_traffic'
+                ORDER BY load_id DESC
+                LIMIT 1
+            ),
+            1
+        )
     """,
     # The joins prove each fact still points at its order's date, country and category.
     "fact_matches_staging": """
@@ -51,26 +66,23 @@ WAREHOUSE_CHECKS = {
 
 WATERMARK_QUERY = "SELECT high_water_mark FROM etl.watermarks WHERE source = 'orders'"
 
-# Both sides are grouped the way the reports slice the data, so a change that was missed
-# or mapped to the wrong dimension shows up even when the row count still matches.
-SOURCE_TOTALS_QUERY = """
-    SELECT order_date, country, category, COUNT(*), SUM(amount),
-        SUM(status = 'cancelled')
+CATALOG_COUNT_QUERY = "SELECT COUNT(*) FROM staging.catalog_products"
+
+# Every order is compared on its own, because totals can hide changes that cancel out.
+SOURCE_ORDERS_QUERY = """
+    SELECT order_id, order_date, country, category, amount, status
     FROM orders
     WHERE updated_at <= %s
-    GROUP BY order_date, country, category
 """
 
-WAREHOUSE_TOTALS_QUERY = """
-    SELECT d.full_date, c.country, k.category, COUNT(*), SUM(f.amount),
-        COUNT(*) FILTER (WHERE f.status = 'cancelled')
+WAREHOUSE_ORDERS_QUERY = """
+    SELECT f.order_id, d.full_date, c.country, k.category, f.amount, f.status
     FROM dw.fact_sales f
     JOIN staging.orders o USING (order_id)
     JOIN dw.dim_date d ON d.date_key = f.date_key
     JOIN dw.dim_country c ON c.country_key = f.country_key
     JOIN dw.dim_category k ON k.category_key = f.category_key
     WHERE o.updated_at <= %s
-    GROUP BY d.full_date, c.country, k.category
 """
 
 
@@ -78,21 +90,14 @@ class QualityCheckError(RuntimeError):
     """At least one check failed, so the marts must not be refreshed."""
 
 
-def _totals_by_group(rows):
-    return {
-        (order_date, country, category): (int(orders), Decimal(amount), int(cancelled))
-        for order_date, country, category, orders, amount, cancelled in rows
-    }
-
-
 def count_differences(source_rows, warehouse_rows):
-    """Return how many report groups differ between the source and the warehouse."""
-    source = _totals_by_group(source_rows)
-    warehouse = _totals_by_group(warehouse_rows)
+    """Return how many orders differ between the source and the warehouse."""
+    source = {row[0]: tuple(row[1:]) for row in source_rows}
+    warehouse = {row[0]: tuple(row[1:]) for row in warehouse_rows}
     return sum(source.get(key) != warehouse.get(key) for key in source | warehouse)
 
 
-def find_failures(source, target):
+def find_failures(source, target, catalog):
     """Return a dictionary of failed checks and how many violations each one found."""
     failures = {}
 
@@ -103,6 +108,9 @@ def find_failures(source, target):
             if violations:
                 failures[name] = violations
 
+        cursor.execute(CATALOG_COUNT_QUERY)
+        catalog_rows = cursor.fetchone()[0]
+
         cursor.execute(WATERMARK_QUERY)
         row = cursor.fetchone()
         if row is None:
@@ -111,21 +119,25 @@ def find_failures(source, target):
 
         # Comparing up to the watermark ignores orders that arrived after this load.
         watermark = row[0]
-        cursor.execute(WAREHOUSE_TOTALS_QUERY, (watermark,))
+        cursor.execute(WAREHOUSE_ORDERS_QUERY, (watermark,))
         warehouse_rows = cursor.fetchall()
 
     with closing(source.cursor()) as cursor:
-        cursor.execute(SOURCE_TOTALS_QUERY, (watermark,))
+        cursor.execute(SOURCE_ORDERS_QUERY, (watermark,))
         source_rows = cursor.fetchall()
 
     differences = count_differences(source_rows, warehouse_rows)
     if differences:
         failures["warehouse_matches_source"] = differences
 
+    missing_products = abs(catalog.count_documents({}) - catalog_rows)
+    if missing_products:
+        failures["catalog_matches_source"] = missing_products
+
     return failures
 
 
-def assert_quality(source, target):
-    failures = find_failures(source, target)
+def assert_quality(source, target, catalog):
+    failures = find_failures(source, target, catalog)
     if failures:
         raise QualityCheckError(f"Failed checks: {failures}")

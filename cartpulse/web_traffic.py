@@ -23,6 +23,7 @@ class MalformedLogError(ValueError):
 @dataclass(frozen=True)
 class ParsedLog:
     rows: list
+    total: int
     excluded: int
     malformed: int
 
@@ -61,7 +62,7 @@ def parse_log(lines, excluded_ips):
     if total and malformed / total > MAX_MALFORMED_SHARE:
         raise MalformedLogError(f"{malformed} of {total} lines could not be parsed")
 
-    return ParsedLog(rows, excluded, malformed)
+    return ParsedLog(rows, total, excluded, malformed)
 
 
 def sync(log_path, target, excluded_ips):
@@ -72,6 +73,13 @@ def sync(log_path, target, excluded_ips):
     with target, target.cursor() as cursor:
         cursor.execute("TRUNCATE staging.web_requests")
         copy_rows(cursor, "staging.web_requests", COLUMNS, parsed.rows)
-        record_load(cursor, SOURCE, len(parsed.rows), len(parsed.rows))
+        record_load(
+            cursor,
+            SOURCE,
+            parsed.total,
+            len(parsed.rows),
+            rows_excluded=parsed.excluded,
+            rows_rejected=parsed.malformed,
+        )
 
     return parsed

@@ -61,9 +61,10 @@ def check_quality():
     settings = Settings()
     with (
         closing(connect_mysql(settings)) as source,
+        closing(connect_mongo(settings)) as client,
         closing(connect_postgres(settings)) as target,
     ):
-        quality.assert_quality(source, target)
+        quality.assert_quality(source, target, client.cartpulse.products)
     log.info("Quality checks passed")
 
 

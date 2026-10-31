@@ -11,7 +11,7 @@ import pytest
 
 from cartpulse import pipeline, quality, seed
 from cartpulse.config import Settings
-from cartpulse.connections import connect_mysql, connect_postgres
+from cartpulse.connections import connect_mongo, connect_mysql, connect_postgres
 
 pytestmark = pytest.mark.integration
 
@@ -189,3 +189,61 @@ def test_a_change_outside_the_lookback_is_caught_and_repaired(
     assert warehouse_value("SELECT amount FROM dw.fact_sales WHERE order_id = 2") == (
         source_value("SELECT amount FROM orders WHERE order_id = 2")
     )
+
+
+def test_changes_that_cancel_out_are_caught_and_repaired(loaded_platform, monkeypatch):
+    with closing(connect_mysql(Settings())) as connection:
+        with closing(connection.cursor()) as cursor:
+            cursor.execute(
+                """
+                SELECT order_id FROM orders ORDER BY order_id LIMIT 2
+                """
+            )
+            (first,), (second,) = cursor.fetchall()
+            for order_id, change in ((first, 1), (second, -1)):
+                cursor.execute(
+                    """
+                    UPDATE orders
+                    SET amount = amount + %s,
+                        updated_at = UTC_TIMESTAMP(6) - INTERVAL 2 HOUR
+                    WHERE order_id = %s
+                    """,
+                    (change, order_id),
+                )
+        connection.commit()
+
+    pipeline.load_orders()
+    pipeline.build_warehouse()
+    with pytest.raises(quality.QualityCheckError, match="warehouse_matches_source"):
+        pipeline.check_quality()
+
+    monkeypatch.setenv("CARTPULSE_WATERMARK_LOOKBACK_SECONDS", "86400")
+    for step in pipeline.STEPS:
+        step()
+
+
+def test_a_missing_catalog_product_is_caught(loaded_platform):
+    settings = Settings()
+    with closing(connect_mongo(settings)) as client:
+        client.cartpulse.products.delete_one({})
+
+    with pytest.raises(quality.QualityCheckError, match="catalog_matches_source"):
+        pipeline.check_quality()
+
+    pipeline.load_catalog()
+    pipeline.check_quality()
+
+
+def test_a_short_web_traffic_load_is_caught(loaded_platform):
+    with closing(connect_postgres(Settings())) as connection:
+        with connection, connection.cursor() as cursor:
+            cursor.execute(
+                "DELETE FROM staging.web_requests WHERE ctid IN "
+                "(SELECT ctid FROM staging.web_requests LIMIT 1)"
+            )
+
+    with pytest.raises(quality.QualityCheckError, match="web_traffic_matches_log"):
+        pipeline.check_quality()
+
+    pipeline.load_web_traffic()
+    pipeline.check_quality()

@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS etl.load_audit (
     source         text NOT NULL,
     rows_extracted bigint NOT NULL,
     rows_changed   bigint NOT NULL,
+    rows_excluded  bigint NOT NULL DEFAULT 0,
+    rows_rejected  bigint NOT NULL DEFAULT 0,
     loaded_at      timestamp NOT NULL DEFAULT now()
 );
 

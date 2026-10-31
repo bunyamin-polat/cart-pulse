@@ -34,6 +34,7 @@ def test_excluded_clients_are_dropped_and_counted():
 
     assert len(parsed.rows) == 1
     assert parsed.excluded == 1
+    assert parsed.total == 2
 
 
 def test_a_few_bad_lines_are_tolerated():

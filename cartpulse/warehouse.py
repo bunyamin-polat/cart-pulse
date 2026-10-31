@@ -24,11 +24,15 @@ def copy_rows(cursor, table, columns, rows):
     )
 
 
-def record_load(cursor, source, rows_extracted, rows_changed):
+def record_load(
+    cursor, source, rows_extracted, rows_changed, rows_excluded=0, rows_rejected=0
+):
     cursor.execute(
         """
-        INSERT INTO etl.load_audit (source, rows_extracted, rows_changed)
-        VALUES (%s, %s, %s)
+        INSERT INTO etl.load_audit (
+            source, rows_extracted, rows_changed, rows_excluded, rows_rejected
+        )
+        VALUES (%s, %s, %s, %s, %s)
         """,
-        (source, rows_extracted, rows_changed),
+        (source, rows_extracted, rows_changed, rows_excluded, rows_rejected),
     )

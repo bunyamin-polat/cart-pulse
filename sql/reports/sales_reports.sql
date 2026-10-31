@@ -18,7 +18,7 @@ GROUP BY category
 ORDER BY total_sales DESC;
 
 \echo 'Latest load'
-SELECT source, rows_extracted, rows_changed, loaded_at
+SELECT source, rows_extracted, rows_changed, rows_excluded, rows_rejected, loaded_at
 FROM etl.load_audit
 ORDER BY load_id DESC
 LIMIT 3;
