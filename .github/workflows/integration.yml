@@ -1,24 +1,24 @@
 name: Integration
 
-# Weekly and on demand, because this downloads the course data from an external host.
+# Weekly and on demand, because this builds large images and downloads the sample data.
 on:
   workflow_dispatch:
   schedule:
     - cron: "0 6 * * 1"
 
 jobs:
-  etl:
+  platform:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
       - run: uv sync --locked
       - run: cp .env.example .env
-      - run: docker compose up --detach --wait mysql-etl postgres
-      - run: make load-etl
-      - name: First run moves the new rows
-        run: make run-etl | tee first_run.txt
-      - run: grep -q "inserted into production datawarehouse =  1650" first_run.txt
-      - name: Second run moves nothing
-        run: make run-etl | tee second_run.txt
-      - run: grep -q "inserted into production datawarehouse =  0" second_run.txt
+      - run: make test-integration
+      - run: make demo
+      - run: make forecast
+      - run: make search-terms
+      - run: make airflow
+      - name: Run the DAG in Airflow
+        run: docker compose --profile airflow exec -T airflow airflow dags test cartpulse_daily

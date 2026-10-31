@@ -15,6 +15,6 @@ jobs:
       - run: make lint
       - run: make test
       - name: Validate Compose file
-        run: docker compose --env-file .env.example --profile admin --profile airflow --profile spark config --quiet
+        run: docker compose --env-file .env.example --profile airflow --profile spark config --quiet
       - name: Lint shell scripts
-        run: find modules -name '*.sh' -exec shellcheck {} +
+        run: find scripts orchestration -name '*.sh' -exec shellcheck {} +
