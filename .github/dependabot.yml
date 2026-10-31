@@ -4,16 +4,23 @@ updates:
     directory: /
     schedule:
       interval: weekly
+  # The databases and base images stay on their LTS lines, so major versions are a decision.
   - package-ecosystem: docker-compose
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: docker
     directories:
       - /orchestration
       - /spark
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
