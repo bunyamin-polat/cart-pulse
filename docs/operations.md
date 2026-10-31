@@ -105,7 +105,7 @@ Passwords are stored when a volume is created, so changing one in `.env` needs a
 
 ## Keeping up to date
 
-All image versions are pinned in `docker-compose.yml` and the Dockerfiles, and Python packages are locked in `uv.lock`. Dependabot proposes updates each week. Check an image with:
+All image versions are pinned in `docker-compose.yml` and the Dockerfiles, and Python packages are locked in `uv.lock`, so updates are always a deliberate change. Check an image with:
 
 ```bash
 docker scout quickview cartpulse-spark:4.3.0
