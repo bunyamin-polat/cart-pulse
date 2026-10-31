@@ -42,7 +42,7 @@ Every day, Airflow loads new and changed orders, refreshes the catalog and web t
 
 ## Quick start
 
-Requires [Docker](https://docs.docker.com/get-docker/), [uv](https://docs.astral.sh/uv/) and `make`.
+Requires [Docker](https://docs.docker.com/get-docker/), [uv](https://docs.astral.sh/uv/) and `make`. On Linux, MongoDB does not start on kernels 6.19 to 7.0.13. See [operations](docs/operations.md#mongodb-does-not-start).
 
 ```bash
 git clone https://github.com/bunyamin-polat/cart-pulse.git

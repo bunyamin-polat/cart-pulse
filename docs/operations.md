@@ -59,6 +59,10 @@ A row that changes in MySQL between the load and the check can also raise this a
 
 Nothing was committed, so run it again. The watermark has not moved, and the next run reads the same window.
 
+### MongoDB does not start
+
+If the log says `Linux kernel versions 6.19 and newer has a known incompatibility`, the host kernel is in the range MongoDB blocks, 6.19 to 7.0.13. Containers share the host kernel, so changing the image does not help. Upgrade the kernel to 7.0.14 or later, or use one older than 6.19. Docker Desktop runs its own kernel, so updating Docker Desktop can also solve it.
+
 ### The log format changed
 
 `load_web_traffic` stops when more than 1% of lines cannot be parsed. Update `LOG_LINE` in `cartpulse/web_traffic.py`.
