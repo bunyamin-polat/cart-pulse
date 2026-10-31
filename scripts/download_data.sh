@@ -16,7 +16,10 @@ download() {
     fi
 
     # Download to a temp file first so an interrupted transfer never looks like a complete one.
-    curl --fail --silent --show-error --location --output "${target}.part" "${BASE_URL}/$1"
+    # The data host can be briefly unreachable, so a failed attempt is retried.
+    curl --fail --silent --show-error --location \
+        --connect-timeout 20 --retry 5 --retry-all-errors --retry-delay 10 \
+        --output "${target}.part" "${BASE_URL}/$1"
     mv "${target}.part" "${target}"
     echo "Downloaded: $(basename "${target}")"
 }
