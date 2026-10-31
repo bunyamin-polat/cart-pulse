@@ -45,7 +45,7 @@ The marts keep their last good state, and the error names each failed check with
 
 ### Reconciliation failed
 
-`warehouse_matches_source` counts the day, country and category groups that differ from MySQL. If the warehouse logic is sound, the usual cause is a change that committed outside the lookback window. Re-read a wider window to repair it:
+`warehouse_matches_source` counts the orders that differ from MySQL. If the warehouse logic is sound, the usual cause is a change that committed outside the lookback window. Re-read a wider window to repair it:
 
 ```bash
 CARTPULSE_WATERMARK_LOOKBACK_SECONDS=86400 make pipeline
@@ -54,6 +54,8 @@ CARTPULSE_WATERMARK_LOOKBACK_SECONDS=86400 make pipeline
 Under Airflow, set the same variable on the service. If the check fails again, compare `orders` in MySQL with `staging.orders` and find the rows that differ.
 
 A row that changes in MySQL between the load and the check can also raise this alarm. The next run clears it.
+
+`catalog_matches_source` and `web_traffic_matches_log` mean a load did not match its source. Run the pipeline again, and check `rows_rejected` in `etl.load_audit` if the log check keeps failing.
 
 ### A load failed
 
@@ -99,7 +101,7 @@ MongoDB and the warehouse have no backup script: the catalog is sample data here
 
 `make seed` and `make demo` replace the orders and the catalog with the sample data, so do not run them on data you want to keep.
 
-`make test-integration` is safe on a running platform. It starts a temporary Compose project with its own volumes and ports, and removes it when it finishes.
+`make test-integration` is safe on a running platform. It starts a temporary Compose project with its own volumes and ports, and removes it when it finishes. It stops if another run is in progress.
 
 Passwords are stored when a volume is created, so changing one in `.env` needs a `make reset`.
 

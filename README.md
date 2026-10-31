@@ -1,8 +1,8 @@
 # CartPulse
 
-CartPulse is a portfolio project that shows how an e-commerce data platform fits together. It moves orders, catalog data and web traffic into a tested sales warehouse, and publishes reports and a 12-month forecast that analysts can query.
+CartPulse is a portfolio data engineering project. It is a reproducible batch pipeline that turns e-commerce orders into checked sales reports and a 12-month forecast.
 
-It runs on one machine with sample data, so it demonstrates production patterns without being production software. See [Limitations](#limitations).
+It is not a live store. It runs on one machine with sample data, and `make next-day` simulates each new business day, so every result can be reproduced with one command.
 
 [![CI](https://github.com/bunyamin-polat/cart-pulse/actions/workflows/ci.yml/badge.svg)](https://github.com/bunyamin-polat/cart-pulse/actions/workflows/ci.yml)
 [![Integration](https://github.com/bunyamin-polat/cart-pulse/actions/workflows/integration.yml/badge.svg)](https://github.com/bunyamin-polat/cart-pulse/actions/workflows/integration.yml)
@@ -14,16 +14,17 @@ It runs on one machine with sample data, so it demonstrates production patterns 
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-## What it answers
+## Purpose
 
-The platform is designed around an analyst who needs sales numbers they can trust, without touching the live store database.
+A store's live database is built to take orders, not to answer questions. Heavy reports slow it down, and figures pulled straight from it can change mid-query or include bad data.
+
+CartPulse shows the standard answer to that problem: copy the data to a warehouse on a schedule, check it, and publish reports only when it passes. The project is designed around an analyst who needs to answer questions like these without touching the store's database:
 
 - What did we sell per year, quarter and month, by country and category?
-- Which sales were cancelled, and are they out of the revenue figures?
 - What should we expect to sell over the next 12 months?
 - What do customers search for, and how much traffic does the store get?
 
-## How it works
+## What happens, step by step
 
 ```mermaid
 flowchart LR
@@ -32,13 +33,22 @@ flowchart LR
     logs[Web server log] --> airflow
     airflow --> dw[(PostgreSQL<br/>warehouse)]
     dw --> gate{Quality<br/>checks}
-    gate --> marts[Report marts]
+    gate -->|pass| marts[Report tables]
     marts --> spark[Spark forecast]
     spark --> marts
     search[Search terms] --> spark
 ```
 
-Every day, Airflow loads new and changed orders, refreshes the catalog and web traffic, rebuilds the star schema and runs the quality checks. The reports are published only if every check passes. See the [architecture](docs/architecture.md) for the design decisions.
+1. **The sources are filled.** `make seed` loads 291,525 orders into MySQL and 438 products into MongoDB. December 2021 is held back to act as future orders.
+2. **A business day is simulated.** `make next-day` adds the next day of held-back orders and cancels five of them, as a real store would.
+3. **Orders load incrementally.** The pipeline reads only orders whose `updated_at` is recent and writes them to the warehouse. It saves its position in the same transaction, so a failed run leaves nothing half done.
+4. **Catalog and web traffic refresh.** Products come from MongoDB and requests are parsed from the web server log. Both replace their previous copy in one transaction.
+5. **The star schema is built.** Staging data becomes one fact table and three dimensions. The calendar is generated from the dates, so its labels cannot be wrong.
+6. **Quality checks run.** Every order is compared with MySQL, and the catalog and log counts are compared with their sources. If any check fails, the run stops here.
+7. **Reports are published.** The report tables refresh in one transaction, and cancelled orders are left out of revenue. If step 6 failed, analysts keep the last good reports.
+8. **Spark adds the forecast.** On demand, Spark reads monthly sales from the warehouse, tests a trend against a plain average on a year it has not seen, and publishes the winner.
+
+Airflow runs steps 3 to 7 every day, and `make pipeline` runs the same code by hand. See the [architecture](docs/architecture.md) for the full design.
 
 ## Quick start
 
@@ -50,27 +60,63 @@ cd cart-pulse
 make setup
 ```
 
-Replace the placeholder passwords in `.env`, then run the whole flow:
+Replace the placeholder passwords in `.env`, then run steps 1 to 7:
 
 ```bash
 make demo
 ```
 
-This starts the databases, loads 291,525 sample orders, replays one new business day and prints the sales reports. Continue with the rest of the platform:
+Continue with the rest of the platform:
 
 ```bash
-make forecast       # publish the 12-month sales forecast
+make forecast       # publish the 12-month forecast
 make search-terms   # publish the search term ranking
 make airflow        # start the scheduler at http://127.0.0.1:8088
-make next-day       # add another day of new and cancelled orders
+make next-day       # simulate another business day
 make psql           # query the warehouse
 ```
 
 Run `make` to list every command.
 
-## What you get
+## Sample results
 
-Open a warehouse shell with `make psql` and query the `marts` schema:
+These outputs come from a run on an empty system. Yours will match, except for timestamps.
+
+The first load moves every order, and each simulated day then moves only what changed:
+
+```text
+Seeded 291525 orders up to 2021-11-30
+Orders: 291525 read, 291525 changed
+Added 269 orders for 2021-12-01 and cancelled 5
+Orders: 291794 read, 269 changed
+Quality checks passed
+```
+
+The second load reads more rows than it changes because seeding happened moments earlier, inside the five-minute lookback window. On a normal schedule it reads little more than the new rows.
+
+`make report` prints the published sales:
+
+```text
+   year    |  total_sales
+-----------+---------------
+ 2019      |  399729036.00
+ 2020      |  400441641.00
+ 2021      |  367690953.00
+ All years | 1167861630.00
+```
+
+2021 is lower because December is mostly held back.
+
+`make forecast` tests both models and publishes the plain average, because the trend does not clearly beat it:
+
+```text
+Backtest RMSE, linear trend: 1,012,168
+Backtest RMSE, average month: 1,015,064
+Published model: average_month
+Forecast for the next 12 months: 400,051,699
+```
+
+The report tables are in the warehouse's `marts` schema:
 
 | Table | Answers |
 | --- | --- |
@@ -84,36 +130,43 @@ Open a warehouse shell with `make psql` and query the `marts` schema:
 | `catalog_summary` | Products and average screen size per product type |
 | `web_traffic_daily` | Daily requests, visitors and server errors |
 
-## Why the numbers can be trusted
+## Key engineering decisions
 
-- **Orders load incrementally.** The pipeline reads orders by `updated_at`, so new orders and corrections arrive, and a repeat run changes nothing.
-- **Loads are atomic.** Rows and the watermark commit together, so a failure leaves no partial load and the next run retries.
-- **A failed check stops publication.** Reports keep their last good state until the data passes.
-- **The warehouse is reconciled with the source.** Totals are compared per day, country and category, so a missed change or a wrong mapping is caught even when the row count matches.
-- **The calendar is generated.** Quarter, month and weekday come from the date itself.
-- **Cancelled orders leave revenue.** They stay in the warehouse for audit and are excluded from the reports.
-- **The forecast has to earn its place.** A trend is published only if it beats a plain average by at least 5% on a year it has not seen. On the sample data it does not, so CartPulse publishes the average and says so in the `model` column.
+| Decision | Why it matters |
+| --- | --- |
+| Watermark on `updated_at` with a lookback | Finds corrections and cancellations as well as new orders, and tolerates transactions that commit slightly late |
+| Rows and watermark in one transaction | A failure leaves no partial load, and the next run retries safely |
+| Quality gate before publishing | Bad data stops at the warehouse, and analysts keep the last good reports |
+| Order-by-order reconciliation | Row counts and totals can hide a changed amount or changes that cancel out |
+| Generated calendar | The sample data's date labels disagree with the calendar on hundreds of days, so the pipeline does not use them |
+| Baseline for the forecast | A trend is published only if it beats a plain average by at least 5% on an unseen year. Here it does not, and the output says so |
+| Isolated end-to-end tests | They run in a temporary stack with their own volumes, so they cannot touch local data |
 
-## Limitations
+The [architecture guide](docs/architecture.md) explains each decision and its trade-offs.
 
-- **Sample data.** The orders are synthetic sales from 2019 to 2021, and December 2021 is held back so `make next-day` can replay it. Sales in this data have no useful trend.
-- **No dashboard.** The marts are the interface, so a BI tool or SQL client is needed to chart them.
-- **Single node.** Everything runs on one machine with Docker Compose, and the ports are bound to localhost. Current images still report upstream vulnerabilities, so do not expose it to a network.
-- **Sources are not joined.** Orders carry a category but no product ID, so the catalog and web traffic stand beside the sales data. Web traffic comes from a static log file.
-- **Late commits have a limit.** A change that commits more than five minutes after its timestamp is missed by the regular load. Reconciliation detects it, and a longer lookback repairs it.
-- **Hard deletes are not handled.** The source is expected to cancel orders, not delete them.
+## Scope
+
+CartPulse is a batch pipeline that imitates production concerns. These boundaries are deliberate:
+
+- **Simulated data.** The orders are synthetic sales from 2019 to 2021, and sales in this data have no useful trend.
+- **Sales, catalog and traffic stay separate.** The sample datasets share no product or customer ID. Joining them would mean inventing a link, so each answers its own questions.
+- **SQL is the interface.** There is no dashboard, and the report tables are ready for any SQL client or BI tool.
+- **One machine.** Everything runs on Docker Compose with ports bound to localhost. Current images report upstream vulnerabilities, so do not expose it to a network.
+- **The forecast runs on demand.** It is not part of the daily Airflow run, because Spark needs its own container.
+- **Late commits have a limit.** A change that commits more than five minutes after its timestamp is missed by the regular load. Reconciliation reports it, and a longer lookback repairs it.
+- **Orders are cancelled, not deleted.** Hard deletes in the source are not handled.
 
 ## Project structure
 
 ```text
 .
-├── cartpulse/           Pipeline code: loads, quality checks and sample data
-├── orchestration/       Airflow image and the daily DAG
-├── spark/               Spark image and analytics jobs
-├── sql/                 Source schema, warehouse layers and reports
-├── scripts/             Data download and backup
-├── tests/               Unit and end-to-end tests
-└── docs/                Architecture and operations guides
+├── cartpulse/       Pipeline code: loads, quality checks and sample data
+├── orchestration/   Airflow image and the daily DAG
+├── spark/           Spark image and analytics jobs
+├── sql/             Source schema, warehouse layers and reports
+├── scripts/         Data download, backup and test scripts
+├── tests/           Unit and end-to-end tests
+└── docs/            Architecture and operations guides
 ```
 
 ## Development
@@ -125,7 +178,7 @@ make test               # run the unit tests
 make test-integration   # run the end-to-end tests in a temporary stack
 ```
 
-CI runs linting, shell checks, Compose validation and unit tests on every push. The integration workflow runs the full platform weekly and on demand. The end-to-end tests start their own containers and volumes, so they never touch local data. See the [operations guide](docs/operations.md) for running and recovering the platform.
+CI runs linting, shell checks, Compose validation and unit tests on every push. The integration workflow runs the full platform weekly and on demand. See the [operations guide](docs/operations.md) for running and recovering the platform.
 
 ## Acknowledgment
 

@@ -105,7 +105,9 @@ Rows and the new watermark commit together. If a load fails, both roll back and 
 
 Checks run after the warehouse build and before the marts refresh. Every fact is compared with its order, including its date, country and category. Amounts, statuses, future dates and the calendar are checked as well. A failure leaves analysts on the last good reports.
 
-Reconciliation compares order counts, revenue and cancellations with the source for each day, country and category. Row counts alone would miss a changed amount or an order mapped to the wrong dimension. A source row that changes between the load and the check can raise a false alarm, which clears on the next run.
+Reconciliation compares every order with MySQL on its date, country, category, amount and status. Row counts and totals could hide a changed amount or two changes that cancel out. A source row that changes between the load and the check can raise a false alarm, which clears on the next run.
+
+The catalog count is compared with MongoDB. The log's total lines must equal the requests loaded plus those excluded and rejected, and `etl.load_audit` records all of them.
 
 ### A generated calendar
 
@@ -130,5 +132,6 @@ Both extend supported base images with only what they need. The Spark image is b
 | Watermark over change data capture | Simple, with no extra infrastructure | Hard deletes go unseen, and late commits need a repair run |
 | Full refresh for catalog and web traffic | Always matches the source | Work grows with source size, not with changes |
 | Rebuilding facts from staging | Easy to reason about and to recover | Slower than processing only changed rows at scale |
+| Order-by-order reconciliation | No change can hide in a total | Each check reads every order, so large tables would need checksums |
 | Airflow `standalone` | One container is enough locally | Components cannot scale separately |
 | Spark in local mode | No cluster to run | It uses Spark's API without its scale |
