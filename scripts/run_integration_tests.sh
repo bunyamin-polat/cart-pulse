@@ -15,6 +15,12 @@ export MONGO_PORT=37017
 export POSTGRES_PORT=15434
 export CARTPULSE_TEST_STACK=1
 
+# Cleaning up would otherwise take down a run that is still going.
+if [[ -n "$(docker compose ps --quiet)" ]]; then
+    echo "The ${COMPOSE_PROJECT_NAME} stack is already running. Wait for that run to finish." >&2
+    exit 1
+fi
+
 remove_stack() {
     local status=$?
     if [[ "${status}" -ne 0 ]]; then
