@@ -2,7 +2,7 @@ name: cartpulse
 
 services:
   mysql:
-    image: mysql:8.4.13
+    image: mysql:26.10.0
     restart: unless-stopped
     user: mysql
     environment:
