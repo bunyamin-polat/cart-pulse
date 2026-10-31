@@ -7,16 +7,11 @@
 .venv/
 __pycache__/
 *.py[cod]
+.pytest_cache/
 .ruff_cache/
 
-# Downloaded or generated data is reproducible through scripts, so it stays out of git
-modules/*/data/*
-!modules/*/data/.gitkeep
-*.sql.gz
-sales_data.sql
-
-# Course grading logs stay local
-submission/
+# Downloaded sample data and backups are reproducible through scripts
+data/
 
 # OS and editor
 .DS_Store
