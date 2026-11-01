@@ -16,13 +16,29 @@ It is not a live store. It runs on one machine with sample data, and `make next-
 
 ## Purpose
 
-A store's live database is built to take orders, not to answer questions. Heavy reports slow it down, and figures pulled straight from it can change mid-query or include bad data.
+Imagine an online store. Orders live in MySQL, the product catalog in MongoDB and site traffic in web server logs. On Monday morning, the head of sales asks an analyst three questions:
 
-CartPulse shows the standard answer to that problem: copy the data to a warehouse on a schedule, check it, and publish reports only when it passes. The project is designed around an analyst who needs to answer questions like these without touching the store's database:
-
-- What did we sell per year, quarter and month, by country and category?
+- Which categories drive revenue in Germany?
 - What should we expect to sell over the next 12 months?
-- What do customers search for, and how much traffic does the store get?
+- What are customers searching for?
+
+Answering from the live order database creates two problems. Heavy reports compete with customers placing orders, and nothing proves that the numbers are complete.
+
+CartPulse solves both. Every day, it copies the data into a separate warehouse, checks it, and publishes reports only if every check passes. The store and this scenario are simulated, and the pipeline behind them is real and tested.
+
+### What the quality gate protects
+
+Suppose a faulty load leaves 200 orders for Germany out of the warehouse:
+
+| | Without a quality gate | With CartPulse |
+| --- | --- | --- |
+| **The run** | The incomplete data is published | The check fails and publishing stops |
+| **The analyst sees** | Germany looks weaker than it really is | The last correct reports |
+| **The outcome** | A decision rests on a wrong number | The failed run is visible in Airflow, ready to fix and rerun |
+
+This is why every order is compared with the source. Comparing totals alone is not enough, because one order that is too high and another that is too low by the same amount leave the total unchanged.
+
+The forecast follows the same rule. A trend model is published only if it clearly beats a plain monthly average on a year it has not seen. On this sample data it does not, so CartPulse publishes the average and names it in the output.
 
 ## What happens, step by step
 
