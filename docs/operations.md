@@ -15,10 +15,10 @@ Ports come from `.env`. All of them are bound to localhost, and Airflow signs ev
 
 ## Running the pipeline
 
-Under Airflow, `cartpulse_daily` runs every day at midnight UTC and retries a failed step twice. To run it now, use the Airflow page or:
+Under Airflow, `cartpulse_daily` runs every day at midnight UTC and retries a failed step twice. To run it now and wait for the result, use the Airflow page or:
 
 ```bash
-docker compose --profile airflow exec airflow airflow dags trigger cartpulse_daily
+make run-dag
 ```
 
 Without Airflow, `make pipeline` runs the same steps in order. Do not run both at once.

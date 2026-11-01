@@ -5,7 +5,7 @@ SPARK_SUBMIT := $(COMPOSE) --profile spark run --rm spark spark-submit --master 
 PSQL := $(COMPOSE) exec -T postgres psql --username=postgres --dbname=warehouse --set=ON_ERROR_STOP=1
 ALL_PROFILES := --profile airflow --profile spark
 
-.PHONY: help setup up down ps logs reset mysql mongo psql download seed pipeline next-day demo report backup airflow forecast search-terms lint format test test-integration
+.PHONY: help setup up down ps logs reset mysql mongo psql download seed pipeline next-day demo report backup airflow run-dag forecast search-terms lint format test test-integration
 
 help: ## Show available commands
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -63,6 +63,9 @@ backup: ## Write a backup of the orders table
 
 airflow: ## Start Apache Airflow
 	$(COMPOSE) --profile airflow up --detach --wait --build airflow
+
+run-dag: ## Trigger the Airflow DAG and wait for it to finish
+	bash scripts/run_dag.sh
 
 forecast: ## Publish the sales forecast to the warehouse
 	$(COMPOSE) --profile spark build spark
